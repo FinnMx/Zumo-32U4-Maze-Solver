@@ -202,7 +202,7 @@ void loop() {
   
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
-  if(counter >= 1){
+  if(counter >= 3){
     motors.setSpeeds(0, 0);
     revertFromMemory();
     return 0;
