@@ -6,8 +6,8 @@
 #include <Timer.h>
 
 const uint16_t maxSpeed = 250;
-const uint16_t defaultSpeedPos = 100;
-const uint16_t defaultSpeedNeg = -100;
+const uint16_t defaultSpeedPos = 150;
+const uint16_t defaultSpeedNeg = -150;
 
 const uint16_t threshold= 375;
 uint16_t counter = 0;
@@ -20,9 +20,9 @@ Zumo32U4IMU imu;
 Zumo32U4OLED display;
 
 
-int storageArray[50]; 
+char storageArray[50]; 
 uint32_t timeStorageArray[50];
-Vector<int> turnMemory;
+Vector<char> turnMemory;
 Vector<uint32_t> turnMemoryTime;
 
 Timer timer(MILLIS);
@@ -198,25 +198,27 @@ void setup() {
 }
 
 void loop() {
-  
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
+  /*
   if(counter >= 3){
     motors.setSpeeds(0, 0);
     revertFromMemory();
     return 0;
   }
+  */
   
-  if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold){
+  if(lineSensorValues[1] > threshold){
     turnMemoryTime.push_back(prevTime);
-    turnMemory.push_back(0);
+    turnMemory.push_back("S");
     reverse();
-    turnRight();
-  }else if(lineSensorValues[2] > threshold && lineSensorValues[1] > threshold){
-    turnMemoryTime.push_back(timer.read());
-    turnMemory.push_back(1);
-    reverse();
-    turnLeft();
+    bool left, right;
+    decidePath(left, right);
+
+    if(left == 1 && right == 0){ turnLeft();     turnMemory.push_back('L'); }
+    else if(right == 1 && left == 0){ turnRight();     turnMemory.push_back('R'); }
+    else if(left == 0 && right == 0) { revertFromMemory(); }
+    else if(left == 1 && right == 1) { turnLeft(); turnMemory.push_back('L'); }
   }
 
   if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
@@ -232,7 +234,7 @@ void loop() {
 
 void reverse(){
     motors.setSpeeds(defaultSpeedNeg,defaultSpeedNeg);
-    delay(300);
+    delay(100);
 }
 
 void shiftForwards(){
@@ -330,16 +332,13 @@ void calibrateSensors()
 void revertFromMemory(){
   while(turnMemory.size() != 0){
     switch(turnMemory[turnMemory.size() - 1]){
-    case 0: // left turn
+    case 'L': // left turn
       turnLeft();
       shiftForwards();
       break;
-    case 1: // right turn
+    case 'R': // right turn
       turnRight();
       shiftForwards();
-      break;
-    case 2:
-    //do nothing
       break;
     default:
       motors.setSpeeds(0,0);
@@ -351,7 +350,7 @@ void revertFromMemory(){
 
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
-  Serial.println(turnMemory.size());
+  //Serial.println(turnMemory.size());
   }
 }
 
@@ -366,4 +365,46 @@ uint32_t getRevertedDelayTime(){
     break;
   }
   //Serial.println("TEST \n" + (turnMemoryTime[turnMemoryTime.size() - 1]) - (turnMemoryTime[turnMemoryTime.size() - 2]));
+}
+
+void decidePath(bool &left, bool &right){
+  uint32_t revTime = 0;
+  turnRight();
+  motors.setSpeeds(0, 0);
+  
+  Timer tempTimer(MILLIS);
+  tempTimer.start();
+
+  // CHECKING IF WE SHOULD TURN RIGHT
+  //lineSensors.read(lineSensorValues);
+  motors.setSpeeds(defaultSpeedPos, defaultSpeedPos);
+  while(tempTimer.read() != 4000){
+    lineSensors.read(lineSensorValues);
+    if(lineSensorValues[1] > threshold){ motors.setSpeeds(0, 0); revTime = tempTimer.read(); break; } // If we found a dead end then stop and note the time it took
+  }
+
+  //if We never reached a dead end
+  if(revTime == 0){ motors.setSpeeds(defaultSpeedNeg, defaultSpeedNeg); delay(4000); motors.setSpeeds(0,0); right = 1; }
+  else if(revTime > 0){ motors.setSpeeds(defaultSpeedNeg,defaultSpeedNeg); delay(revTime); motors.setSpeeds(0,0);  right = 0; }
+  //Revert to original facing direction
+  turnLeft();
+
+  // CHECKING IF WE SHOULD TURN LEFT
+  turnLeft();
+
+  tempTimer.stop();
+  tempTimer.start();
+
+    motors.setSpeeds(defaultSpeedPos, defaultSpeedPos);
+  while(tempTimer.read() != 4000){
+    lineSensors.read(lineSensorValues);
+    if(lineSensorValues[1] > threshold){ motors.setSpeeds(0, 0); revTime = tempTimer.read(); break; } // If we found a dead end then stop and note the time it took
+  }
+
+  //if We never reached a dead end
+  if(revTime == 0){ motors.setSpeeds(defaultSpeedNeg, defaultSpeedNeg); delay(4000); motors.setSpeeds(0,0);  left = 1; }
+  else if(revTime > 0){ motors.setSpeeds(defaultSpeedNeg,defaultSpeedNeg); delay(revTime); motors.setSpeeds(0,0);  left = 0; }
+  //Revert to original facing direction
+  turnRight();
+
 }
