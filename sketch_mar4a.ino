@@ -375,25 +375,46 @@ void revertFromMemory(){
       break;
     }
   motors.setSpeeds(defaultSpeedNeg, defaultSpeedNeg);
+  //  Serial.println(getRevertedDelayTime());
   delay(getRevertedDelayTime());
   motors.setSpeeds(0,0);
 
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
+<<<<<<< Updated upstream
   //Serial.println(turnMemory.size());
+=======
+>>>>>>> Stashed changes
   }
   finished = true;
 }
 
 uint32_t getRevertedDelayTime(){
+  if(turnMemoryTime[turnMemoryTime.size() - 2] > 60000){
+    if(turnMemoryTime[turnMemoryTime.size() - 1] > 60000){
+      return 0;
+    } 
+    else{
+      Serial.println(turnMemoryTime[turnMemoryTime.size() -1]);
+      return turnMemoryTime[turnMemoryTime.size() -1];
+    }
+  }
+  Serial.println(turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2]);
+  return turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2];
+  /*
   switch(turnMemoryTime.size()){
     case -1:
     //need to reset the storage here
       return 0;
     break;
     default:
-      return turnMemoryTime[turnMemoryTime.size() - 1];
+      return turnMemoryTime[turnMemoryTime.size() - 1] - turnMemoryTime[turnMemoryTime.size() - 2];
     break;
   }
+<<<<<<< Updated upstream
   //Serial.println("TEST \n" + (turnMemoryTime[turnMemoryTime.size() - 1]) - (turnMemoryTime[turnMemoryTime.size() - 2]));
 }
+=======
+  */
+}
+>>>>>>> Stashed changes
