@@ -6,8 +6,8 @@
 #include <Timer.h>
 
 const uint16_t maxSpeed = 250;
-const uint16_t defaultSpeedPos = 100;
-const uint16_t defaultSpeedNeg = -100;
+const uint16_t defaultSpeedPos = 200;
+const uint16_t defaultSpeedNeg = -200;
 
 const uint16_t threshold= 375;
 uint16_t counter = 0;
@@ -33,6 +33,7 @@ uint32_t prevTime;
 unsigned int lineSensorValues[NUM_SENSORS];
 unsigned int prevLineSensorValues[NUM_SENSORS];
 
+bool finished = false;
 
 
 
@@ -69,6 +70,7 @@ you cast it to a signed 32-bit integer by writing
 (int32_t)turnAngle, that integer can represent any angle between
 -180 degrees and 180 degrees. */
 uint32_t turnAngle = 0;
+uint32_t targetTurnAngle = 0;
 
 // turnRate is the current angular rate of the gyro, in units of
 // 0.07 degrees per second.
@@ -170,6 +172,7 @@ void turnSensorSetup()
     display.print(F("   "));
   }
   display.clear();
+  targetTurnAngle = turnAngle;
 }
 
 
@@ -198,34 +201,53 @@ void setup() {
 }
 
 void loop() {
-  
+  if(finished){ motors.setSpeeds(0,0); return 0; }
+  Serial.println(turnAngle);
+
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
+
+  
   if(counter >= 3){
     motors.setSpeeds(0, 0);
     revertFromMemory();
     return 0;
   }
   
+  //checkTurnAngleSame();
+  
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold){
+      Serial.println("right turn");
+      targetTurnAngle += -turnAngle45;
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(0);
     reverse();
     turnRight();
   }else if(lineSensorValues[2] > threshold && lineSensorValues[1] > threshold){
-    turnMemoryTime.push_back(timer.read());
+    Serial.println("left turn");
+    targetTurnAngle += turnAngle45;
+    turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
     reverse();
     turnLeft();
   }
-
-  if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
-    //bearRight();
-  }
-
+/*
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
-    //bearLeft();
+    delay(20);
+    if(lineSensorValues[1] > threshold){ return; }
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(2);
+    bearLeft();
   }
+
+    if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
+    delay(20);
+    if(lineSensorValues[1] > threshold){ return; }
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(3);
+    bearRight();
+  }
+  */
 
   motors.setSpeeds(defaultSpeedPos,defaultSpeedPos);
 }
@@ -253,11 +275,13 @@ void turn180(){
 void bearLeft(){
   motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
   delay(100); // how long to bear
+  counter++;
 }
 
 void bearRight(){
   motors.setSpeeds(defaultSpeedPos, defaultSpeedNeg);
   delay(100); // how long to bear
+  counter++;
 }
 
 void turnLeft(){
@@ -339,8 +363,13 @@ void revertFromMemory(){
       shiftForwards();
       break;
     case 2:
-    //do nothing
+    bearRight();
+    motors.setSpeeds(0,0);
       break;
+    case 3:
+    bearLeft();
+    motors.setSpeeds(0,0);
+    break;
     default:
       motors.setSpeeds(0,0);
       break;
@@ -351,8 +380,9 @@ void revertFromMemory(){
 
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
-  Serial.println(turnMemory.size());
+  //Serial.println(turnMemory.size());
   }
+  finished = true;
 }
 
 uint32_t getRevertedDelayTime(){
