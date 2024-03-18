@@ -6,14 +6,20 @@
 #include <Timer.h>
 
 const uint16_t maxSpeed = 250;
+<<<<<<< Updated upstream
 const uint16_t defaultSpeedPos = 100;
 const uint16_t defaultSpeedNeg = -100;
+=======
+const uint16_t defaultSpeedPos = 150;
+const uint16_t defaultSpeedNeg = -150;
+>>>>>>> Stashed changes
 
 const uint16_t threshold= 375;
 uint16_t counter = 0;
 
 Zumo32U4Buzzer buzzer;
 Zumo32U4LineSensors lineSensors;
+Zumo32U4ProximitySensors proximitySensors;   
 Zumo32U4Motors motors;
 Zumo32U4ButtonA buttonA;
 Zumo32U4IMU imu;
@@ -186,6 +192,7 @@ void setup() {
   turnMemoryTime.setStorage(timeStorageArray, 0);
 
   lineSensors.initThreeSensors();
+  proximitySensors.initThreeSensors();
 
   //Song to ensure that the zumo has been flashed and is ready
   buzzer.playFrequency(440, 100, 7);
@@ -198,25 +205,50 @@ void setup() {
 }
 
 void loop() {
+<<<<<<< Updated upstream
   
+=======
+  proximitySensors.read();
+  int16_t proxReading = proximitySensors.countsFrontWithLeftLeds();
+
+  if(proxReading >= 6) {  finished = true; }
+  
+  if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
+
+>>>>>>> Stashed changes
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
   if(counter >= 3){
     motors.setSpeeds(0, 0);
     revertFromMemory();
-    return 0;
+    finished = true;
   }
   
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold){
+<<<<<<< Updated upstream
+=======
+      //Serial.println("right turn");
+      targetTurnAngle += -turnAngle45;
+>>>>>>> Stashed changes
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(0);
     reverse();
     turnRight();
+    timer.stop();
+    timer.start();
   }else if(lineSensorValues[2] > threshold && lineSensorValues[1] > threshold){
+<<<<<<< Updated upstream
     turnMemoryTime.push_back(timer.read());
+=======
+    //Serial.println("left turn");
+    targetTurnAngle += turnAngle45;
+    turnMemoryTime.push_back(prevTime);
+>>>>>>> Stashed changes
     turnMemory.push_back(1);
     reverse();
     turnLeft();
+    timer.stop();
+    timer.start();
   }
 
   if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
@@ -226,7 +258,11 @@ void loop() {
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
     //bearLeft();
   }
+<<<<<<< Updated upstream
 
+=======
+*/
+>>>>>>> Stashed changes
   motors.setSpeeds(defaultSpeedPos,defaultSpeedPos);
 }
 
@@ -351,11 +387,36 @@ void revertFromMemory(){
 
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
+<<<<<<< Updated upstream
   Serial.println(turnMemory.size());
+=======
+>>>>>>> Stashed changes
   }
 }
 
 uint32_t getRevertedDelayTime(){
+<<<<<<< Updated upstream
+=======
+  Serial.println("-1: ");
+  Serial.println(turnMemoryTime[turnMemoryTime.size() - 1]);
+  Serial.println("-2: ");
+  Serial.println(turnMemoryTime[turnMemoryTime.size() - 2]);
+
+  return turnMemoryTime[turnMemoryTime.size() -1];
+  /*
+  if(turnMemoryTime[turnMemoryTime.size() - 2] > 60000){
+    if(turnMemoryTime[turnMemoryTime.size() - 1] > 60000){
+      return 0;
+    }
+    else{
+      //Serial.println(turnMemoryTime[turnMemoryTime.size() -1]);
+      return turnMemoryTime[turnMemoryTime.size() -1];
+    }
+  }
+  //Serial.println(turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2]);
+  return turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2];
+  /*
+>>>>>>> Stashed changes
   switch(turnMemoryTime.size()){
     case -1:
     //need to reset the storage here
@@ -367,3 +428,8 @@ uint32_t getRevertedDelayTime(){
   }
   //Serial.println("TEST \n" + (turnMemoryTime[turnMemoryTime.size() - 1]) - (turnMemoryTime[turnMemoryTime.size() - 2]));
 }
+<<<<<<< Updated upstream
+=======
+  */
+}
+>>>>>>> Stashed changes
