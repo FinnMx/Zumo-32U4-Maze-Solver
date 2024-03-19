@@ -19,6 +19,7 @@ Zumo32U4Motors motors;
 Zumo32U4ButtonA buttonA;
 Zumo32U4IMU imu;
 Zumo32U4OLED display;
+Zumo32U4Encoders encoders;
 
 
 int storageArray[50]; 
@@ -36,7 +37,13 @@ unsigned int prevLineSensorValues[NUM_SENSORS];
 
 bool finished = false;
 
+const int DESIRED_LEFT_SPEED = 102; // change this back to an even number
+const int DESIRED_RIGHT_SPEED = 100;
+int leftEncoderCount = 0;
+int rightEncoderCount = 0;
 
+uint16_t leftPWMMotorSpeed = 0;
+uint16_t rightPWMMotorSpeed = 0;
 
 //==========================================================================
 // TURN SENSOR TEST!!!!!!!!!
@@ -138,9 +145,6 @@ void turnSensorSetup()
   imu.enableDefault();
   imu.configureForTurnSensing();
 
-  display.clear();
-  display.print(F("Gyro cal"));
-
   // Turn on the yellow LED in case the display is not available.
   ledYellow(1);
 
@@ -191,6 +195,7 @@ void setup() {
 
   lineSensors.initThreeSensors();
   proximitySensors.initThreeSensors();
+  encoders.init();
 
   //Song to ensure that the zumo has been flashed and is ready
   buzzer.playFrequency(440, 100, 7);
@@ -199,10 +204,14 @@ void setup() {
   turnSensorSetup();
   calibrateSensors();
 
+  calibrateMotorSpeeds();
+
   timer.start();
 }
 
 void loop() {
+  
+  turnSensorUpdate();
   proximitySensors.read();
   int16_t proxReading = proximitySensors.countsFrontWithLeftLeds();
 
@@ -212,19 +221,9 @@ void loop() {
 
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
-
-  
-  if(counter >= 3){
-    motors.setSpeeds(0, 0);
-    revertFromMemory();
-    finished = true;
-  }
-  
-  //checkTurnAngleSame();
   
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold){
-      //Serial.println("right turn");
-      targetTurnAngle += -turnAngle45;
+      targetTurnAngle = -turnAngle45 * 2;
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(0);
     reverse();
@@ -232,8 +231,7 @@ void loop() {
     timer.stop();
     timer.start();
   }else if(lineSensorValues[2] > threshold && lineSensorValues[1] > threshold){
-    //Serial.println("left turn");
-    targetTurnAngle += turnAngle45;
+    targetTurnAngle = turnAngle45 * 2;
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
     reverse();
@@ -241,13 +239,16 @@ void loop() {
     timer.stop();
     timer.start();
   }
-/*
+
+  /*
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
     delay(20);
     if(lineSensorValues[1] > threshold){ return; }
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(2);
     bearLeft();
+    timer.stop();
+    timer.start();
   }
 
     if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
@@ -256,39 +257,41 @@ void loop() {
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(3);
     bearRight();
+    timer.stop();
+    timer.start();
   }
-*/
-  motors.setSpeeds(defaultSpeedPos,defaultSpeedPos);
+  */
+  motors.setSpeeds(leftPWMMotorSpeed,rightPWMMotorSpeed);
 }
 
 void reverse(){
-    motors.setSpeeds(defaultSpeedNeg,defaultSpeedNeg);
+    motors.setSpeeds(-leftPWMMotorSpeed,-rightPWMMotorSpeed);
     delay(300);
 }
 
 void shiftForwards(){
-    motors.setSpeeds(defaultSpeedPos,defaultSpeedPos);
+    motors.setSpeeds(leftPWMMotorSpeed,rightPWMMotorSpeed);
     delay(300);
 }
 
 void turn180(){
-    motors.setSpeeds(defaultSpeedNeg,defaultSpeedNeg);
+    motors.setSpeeds(-leftPWMMotorSpeed,-rightPWMMotorSpeed);
     delay(300);
     motors.setSpeeds(0,0);
     delay(300);
-    motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
+    motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
     delay(2000); // how long to turn
     counter++;
 }
 
 void bearLeft(){
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
+  motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
   delay(100); // how long to bear
   counter++;
 }
 
 void bearRight(){
-  motors.setSpeeds(defaultSpeedPos, defaultSpeedNeg);
+  motors.setSpeeds(leftPWMMotorSpeed, -rightPWMMotorSpeed);
   delay(100); // how long to bear
   counter++;
 }
@@ -297,7 +300,7 @@ void turnLeft(){
     turnSensorReset();
     motors.setSpeeds(0,0);
     delay(300);
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
+  motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
   while((int32_t)turnAngle < turnAngle45 * 2)
   {
     turnSensorUpdate();
@@ -310,7 +313,7 @@ void turnRight(){
     turnSensorReset();
     motors.setSpeeds(0,0);
     delay(300);
-  motors.setSpeeds(defaultSpeedPos, defaultSpeedNeg);
+  motors.setSpeeds(leftPWMMotorSpeed, -rightPWMMotorSpeed);
   while((int32_t)turnAngle > -turnAngle45 * 2)
   {
     turnSensorUpdate();
@@ -421,4 +424,40 @@ uint32_t getRevertedDelayTime(){
   //Serial.println("TEST \n" + (turnMemoryTime[turnMemoryTime.size() - 1]) - (turnMemoryTime[turnMemoryTime.size() - 2]));
 }
   */
+}
+
+void calibrateMotorSpeeds(){
+  Timer tempTimer(MILLIS);
+  int leftSpeedError = 0;
+  int rightSpeedError = 0;
+
+    leftPWMMotorSpeed = DESIRED_LEFT_SPEED;
+    rightPWMMotorSpeed = DESIRED_RIGHT_SPEED;
+
+  /*
+  timer.start();
+  while(timer.read() != 50){
+    motors.setSpeeds(leftPWMMotorSpeed, rightPWMMotorSpeed);
+
+    leftEncoderCount = encoders.getCountsLeft();
+    rightEncoderCount = encoders.getCountsRight();
+
+    if(leftEncoderCount < rightEncoderCount){
+      leftPWMMotorSpeed++;
+    } else if(leftEncoderCount > rightEncoderCount){
+      rightPWMMotorSpeed++;
+    }
+
+    Serial.print("Left : ");
+    Serial.println(leftEncoderCount);
+    Serial.print("right : ");
+    Serial.println(rightEncoderCount);
+  }
+  motors.setSpeeds(0,0);
+      Serial.print("Left : ");
+    Serial.println(leftPWMMotorSpeed);
+    Serial.print("right : ");
+    Serial.println(rightPWMMotorSpeed);
+
+    */
 }
