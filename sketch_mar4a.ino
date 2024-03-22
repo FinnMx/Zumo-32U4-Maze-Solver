@@ -6,11 +6,15 @@
 #include <Timer.h>
 
 const uint16_t maxSpeed = 250;
-const uint16_t defaultSpeedPos = 150;
-const uint16_t defaultSpeedNeg = -150;
+const uint16_t defaultSpeedPos = 75;
+const uint16_t defaultSpeedNeg = -75;
 
 const uint16_t threshold= 375;
-uint16_t counter = 0;
+uint16_t counterL = 0;
+uint16_t counterR = 0;
+uint16_t prevCounterL = 0;
+uint16_t prevCounterR = 0;
+char forceTurn = 'E';
 
 Zumo32U4Buzzer buzzer;
 Zumo32U4LineSensors lineSensors;
@@ -184,8 +188,6 @@ void turnSensorSetup()
 //======================================================================
 //TEST OVER
 
-
-
 void setup() {
   // THIS Serial.begin ALLOWS US TO DEBUG
   Serial.begin(9600);
@@ -213,25 +215,31 @@ void loop() {
   
   turnSensorUpdate();
   proximitySensors.read();
-  int16_t proxReading = proximitySensors.countsFrontWithLeftLeds();
+  int16_t proxReadingL = proximitySensors.countsFrontWithLeftLeds();
+  int16_t proxReadingR = proximitySensors.countsFrontWithRightLeds();
 
-  if(proxReading >= 6) {  finished = true; }
+  Serial.println(proxReadingL);
+  Serial.println(proxReadingR);
+
+  if(proxReadingL >= 6 && proxReadingR >= 6) {  finished = true; }
   
   if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
 
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
   
-  if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold){
-      targetTurnAngle = -turnAngle45 * 2;
-    turnMemoryTime.push_back(prevTime);
-    turnMemory.push_back(0);
-    reverse();
-    turnRight();
-    timer.stop();
-    timer.start();
-  }else if(lineSensorValues[2] > threshold && lineSensorValues[1] > threshold){
-    targetTurnAngle = turnAngle45 * 2;
+  if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold){
+  counterR++;
+      turnMemoryTime.push_back(prevTime);
+      turnMemory.push_back(0);
+      reverse();
+      turnRight();
+      timer.stop();
+      timer.start();
+  }
+  else if((lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] < threshold)
+  || (lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] > threshold)){
+    counterL++;
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
     reverse();
@@ -240,28 +248,32 @@ void loop() {
     timer.start();
   }
 
-  /*
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
-    delay(20);
-    if(lineSensorValues[1] > threshold){ return; }
-    turnMemoryTime.push_back(prevTime);
-    turnMemory.push_back(2);
-    bearLeft();
-    timer.stop();
-    timer.start();
+    delay(100);
+    lineSensors.read(lineSensorValues);
+    if(lineSensorValues[1] < threshold){
+      turnMemoryTime.push_back(prevTime);
+      turnMemory.push_back(2);
+      bearLeft();
+      timer.stop();
+      timer.start();
+    }
   }
 
-    if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
-    delay(20);
-    if(lineSensorValues[1] > threshold){ return; }
-    turnMemoryTime.push_back(prevTime);
-    turnMemory.push_back(3);
-    bearRight();
-    timer.stop();
-    timer.start();
+  if(lineSensorValues[0] > threshold && lineSensorValues[1] <= threshold){
+    delay(100);
+    lineSensors.read(lineSensorValues);
+    if(lineSensorValues[1] < threshold){
+      turnMemoryTime.push_back(prevTime);
+      turnMemory.push_back(3);
+      bearRight();
+      timer.stop();
+      timer.start();
+    }
   }
-  */
+  
   motors.setSpeeds(leftPWMMotorSpeed,rightPWMMotorSpeed);
+    
 }
 
 void reverse(){
@@ -281,22 +293,22 @@ void turn180(){
     delay(300);
     motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
     delay(2000); // how long to turn
-    counter++;
+    
 }
 
 void bearLeft(){
   motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
   delay(100); // how long to bear
-  counter++;
 }
 
 void bearRight(){
   motors.setSpeeds(leftPWMMotorSpeed, -rightPWMMotorSpeed);
   delay(100); // how long to bear
-  counter++;
 }
 
 void turnLeft(){
+  prevCounterL = counterL;
+  counterL++;
     turnSensorReset();
     motors.setSpeeds(0,0);
     delay(300);
@@ -306,7 +318,6 @@ void turnLeft(){
     turnSensorUpdate();
   }
   motors.setSpeeds(0,0);
-    counter++;
 }
 
 void turnRight(){
@@ -319,7 +330,13 @@ void turnRight(){
     turnSensorUpdate();
   }
   motors.setSpeeds(0,0);
-    counter++;
+}
+
+void resetCounters(){
+  counterL = 0;
+  counterR = 0;
+  prevCounterL = 0;
+  prevCounterR = 0;
 }
 
 void calibrateSensors()
@@ -399,31 +416,6 @@ void revertFromMemory(){
 uint32_t getRevertedDelayTime(){
 
   return turnMemoryTime[turnMemoryTime.size() -1];
-  /*
-  if(turnMemoryTime[turnMemoryTime.size() - 2] > 60000){
-    if(turnMemoryTime[turnMemoryTime.size() - 1] > 60000){
-      return 0;
-    }
-    else{
-      //Serial.println(turnMemoryTime[turnMemoryTime.size() -1]);
-      return turnMemoryTime[turnMemoryTime.size() -1];
-    }
-  }
-  //Serial.println(turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2]);
-  return turnMemoryTime[turnMemoryTime.size() -1] -  turnMemoryTime[turnMemoryTime.size() - 2];
-  /*
-  switch(turnMemoryTime.size()){
-    case -1:
-    //need to reset the storage here
-      return 0;
-    break;
-    default:
-      return turnMemoryTime[turnMemoryTime.size() - 1] - turnMemoryTime[turnMemoryTime.size() - 2];
-    break;
-  }
-  //Serial.println("TEST \n" + (turnMemoryTime[turnMemoryTime.size() - 1]) - (turnMemoryTime[turnMemoryTime.size() - 2]));
-}
-  */
 }
 
 void calibrateMotorSpeeds(){
