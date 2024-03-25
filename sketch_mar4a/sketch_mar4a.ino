@@ -189,7 +189,6 @@ void turnSensorSetup()
 //TEST OVER
 
 void setup() {
-  // THIS Serial.begin ALLOWS US TO DEBUG
   Serial.begin(9600);
 
   turnMemory.setStorage(storageArray, 0);
@@ -414,7 +413,6 @@ void revertFromMemory(){
 }
 
 uint32_t getRevertedDelayTime(){
-
   return turnMemoryTime[turnMemoryTime.size() -1];
 }
 
@@ -426,30 +424,4 @@ void calibrateMotorSpeeds(){
     leftPWMMotorSpeed = DESIRED_LEFT_SPEED;
     rightPWMMotorSpeed = DESIRED_RIGHT_SPEED;
 
-  /*
-  timer.start();
-  while(timer.read() != 50){
-    motors.setSpeeds(leftPWMMotorSpeed, rightPWMMotorSpeed);
-
-    leftEncoderCount = encoders.getCountsLeft();
-    rightEncoderCount = encoders.getCountsRight();
-
-    if(leftEncoderCount < rightEncoderCount){
-      leftPWMMotorSpeed++;
-    } else if(leftEncoderCount > rightEncoderCount){
-      rightPWMMotorSpeed++;
-    }
-
-    Serial.print("Left : ");
-    Serial.println(leftEncoderCount);
-    Serial.print("right : ");
-    Serial.println(rightEncoderCount);
-  }
-  motors.setSpeeds(0,0);
-      Serial.print("Left : ");
-    Serial.println(leftPWMMotorSpeed);
-    Serial.print("right : ");
-    Serial.println(rightPWMMotorSpeed);
-
-    */
 }
