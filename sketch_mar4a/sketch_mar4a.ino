@@ -228,7 +228,18 @@ void loop() {
   prevTime = timer.read();
   
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold){
+  counterL = 0;
   counterR++;
+  if((counterR % 3) == 0){
+     buzzer.playFrequency(440, 100, 15);
+    counterR = 0;
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(1);
+    reverse();
+    turnLeft();
+    timer.stop();
+    timer.start();
+  } else{
       turnMemoryTime.push_back(prevTime);
       turnMemory.push_back(0);
       reverse();
@@ -236,15 +247,28 @@ void loop() {
       timer.stop();
       timer.start();
   }
+  }
   else if((lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] < threshold)
   || (lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] > threshold)){
+    counterR = 0;
     counterL++;
+    if((counterL % 3) == 0){
+       buzzer.playFrequency(440, 100, 15);
+      counterL = 0;
+      turnMemoryTime.push_back(prevTime);
+      turnMemory.push_back(0);
+      reverse();
+      turnRight();
+      timer.stop();
+      timer.start();
+    } else{
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
     reverse();
     turnLeft();
     timer.stop();
     timer.start();
+    }
   }
 
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
@@ -306,8 +330,6 @@ void bearRight(){
 }
 
 void turnLeft(){
-  prevCounterL = counterL;
-  counterL++;
     turnSensorReset();
     motors.setSpeeds(0,0);
     delay(300);
