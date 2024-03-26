@@ -21,6 +21,7 @@ Zumo32U4LineSensors lineSensors;
 Zumo32U4ProximitySensors proximitySensors;   
 Zumo32U4Motors motors;
 Zumo32U4ButtonA buttonA;
+Zumo32U4ButtonB buttonB;
 Zumo32U4IMU imu;
 Zumo32U4OLED display;
 Zumo32U4Encoders encoders;
@@ -40,6 +41,8 @@ unsigned int lineSensorValues[NUM_SENSORS];
 unsigned int prevLineSensorValues[NUM_SENSORS];
 
 bool finished = false;
+uint8_t targetHouses = 1; // default number of ghouses we are looking for.
+uint8_t detectedHouses = 0;
 
 const int DESIRED_LEFT_SPEED = 102; // change this back to an even number
 const int DESIRED_RIGHT_SPEED = 100;
@@ -201,6 +204,23 @@ void setup() {
   //Song to ensure that the zumo has been flashed and is ready
   buzzer.playFrequency(440, 100, 7);
 
+  while (!buttonB.getSingleDebouncedRelease())
+  {
+    if(buttonA.getSingleDebouncedRelease()){
+      targetHouses++;
+      if(targetHouses > 2){
+        targetHouses = 1;
+      }
+
+      for(uint8_t i = 0; i < targetHouses; i++){
+        delay(200);
+        buzzer.playFrequency(440, 100, 10);
+      }
+    }
+  }
+
+  buzzer.playFrequency(440, 500, 7);
+
   buttonA.waitForButton();
   turnSensorSetup();
   calibrateSensors();
@@ -211,27 +231,24 @@ void setup() {
 }
 
 void loop() {
+
+  Serial.println(targetHouses);
   
   turnSensorUpdate();
   proximitySensors.read();
   int16_t proxReadingL = proximitySensors.countsFrontWithLeftLeds();
   int16_t proxReadingR = proximitySensors.countsFrontWithRightLeds();
 
-  Serial.println(proxReadingL);
-  Serial.println(proxReadingR);
-
-  if(proxReadingL >= 6 && proxReadingR >= 6) {  finished = true; }
-  
-  if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
-
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
+
+  if(proxReadingL >= 6 && proxReadingR >= 6) {  detectedHouses++; encounteredAHouse(prevTime); timer.stop(); timer.start(); }
+  if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
   
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold){
   counterL = 0;
   counterR++;
   if((counterR % 3) == 0){
-     buzzer.playFrequency(440, 100, 15);
     counterR = 0;
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
@@ -310,12 +327,9 @@ void shiftForwards(){
 }
 
 void turn180(){
-    motors.setSpeeds(-leftPWMMotorSpeed,-rightPWMMotorSpeed);
-    delay(300);
-    motors.setSpeeds(0,0);
-    delay(300);
-    motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
-    delay(2000); // how long to turn
+  reverse();
+  turnLeft();
+  turnLeft();
     
 }
 
@@ -420,6 +434,9 @@ void revertFromMemory(){
     bearLeft();
     motors.setSpeeds(0,0);
     break;
+    case 4:
+    turn180();
+    motors.setSpeeds(0,0);
     default:
       motors.setSpeeds(0,0);
       break;
@@ -431,7 +448,6 @@ void revertFromMemory(){
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
   }
-  finished = true;
 }
 
 uint32_t getRevertedDelayTime(){
@@ -446,4 +462,18 @@ void calibrateMotorSpeeds(){
     leftPWMMotorSpeed = DESIRED_LEFT_SPEED;
     rightPWMMotorSpeed = DESIRED_RIGHT_SPEED;
 
+}
+
+void encounteredAHouse(uint32_t prevTime){
+  if(detectedHouses == targetHouses){
+    finished = true;
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(5);
+    return;
+  }else{
+    turn180();
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(4);
+
+  }
 }
