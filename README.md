@@ -1,7 +1,7 @@
 # Zumo 32U4 Maze Solver
 ## Description
 
-This repo consists of a single arduino .INO file. Inside the file you will find an arduino script designed to navigate a Zumo 32U4 around a maze by detecting the boundaries of the maze and avoiding it. This script is fairly basic as the limitations of the Zumos we had access to meant we couldn't fine tune an efficient approach.
+This repo consists of a single arduino .INO file. Inside the file you will find an arduino script designed to navigate a Zumo 32U4 around a maze by detecting the boundaries of the maze and avoiding it. This script is fairly basic as the limitations of the Zumos we had access to meant we couldn't fine tune an efficient approach. See the flowchart listed below to get a simple understanding of the robots event loop.
 
 ## Dependencies
 ### Libraries
