@@ -16,6 +16,11 @@ This repo consists of a single arduino .INO file. Inside the file you will find 
 
 - The Gyroscope / IMU setup routine is copied from the [Zumo 32U4 example .ino files](https://github.com/pololu/zumo-32u4-arduino-library/tree/master/examples).
 
+## Event Loop Flowchart
+
+![Zumo Loop drawio (1)](https://github.com/FinnMx/Zumo-32U4-Maze-Solver/assets/93927783/ce5053e6-fd61-4719-b3df-e10e4a56d528)
+
+
 ## Overview of key functions
 
 ### Setup
