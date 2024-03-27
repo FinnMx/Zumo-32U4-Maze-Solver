@@ -22,7 +22,7 @@ This repo consists of a single arduino .INO file. Inside the file you will find 
 
 ## How to use
 
-1) Flash your Zumo 32uU4 with the .ino
+1) Install all the dependencies listed. Then flash your Zumo 32uU4 with the .ino
 2) Place the zumo in your maze (must have a white floor with black borders in a well lit enviroment)
 3) Press the A button to cycle through how many target houses you want to set (it will beep once or twice each press, indicating how many its target is set to).
 4) Press B to confirm your target houses and wait for the beep to play.
