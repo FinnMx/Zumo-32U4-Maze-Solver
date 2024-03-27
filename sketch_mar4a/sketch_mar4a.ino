@@ -196,6 +196,7 @@ void setup() {
   lineSensors.initThreeSensors();
   proximitySensors.initThreeSensors();
   encoders.init();
+  calibrateMotorSpeeds();
 
   //Song to ensure that the zumo has been flashed and is ready
   buzzer.playFrequency(440, 100, 7);
@@ -221,8 +222,6 @@ void setup() {
   turnSensorSetup();
   calibrateSensors();
 
-  calibrateMotorSpeeds();
-
   timer.start();
 }
 
@@ -239,7 +238,8 @@ void loop() {
   if(proxReadingL >= 6 && proxReadingR >= 6) {  detectedHouses++; encounteredAHouse(prevTime); timer.stop(); timer.start(); }
   if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
   
-  if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold){
+  if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold
+  || (lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] > threshold)){
   counterL = 0;
   counterR++;
   if((counterR % 3) == 0){
@@ -259,12 +259,10 @@ void loop() {
       timer.start();
   }
   }
-  else if((lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] < threshold)
-  || (lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] > threshold)){
+  else if((lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] < threshold)){
     counterR = 0;
     counterL++;
     if((counterL % 3) == 0){
-       buzzer.playFrequency(440, 100, 15);
       counterL = 0;
       turnMemoryTime.push_back(prevTime);
       turnMemory.push_back(0);
