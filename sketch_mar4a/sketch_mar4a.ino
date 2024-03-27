@@ -5,16 +5,12 @@
 #include <string.h>
 #include <Timer.h>
 
-const uint16_t maxSpeed = 250;
 const uint16_t defaultSpeedPos = 75;
 const uint16_t defaultSpeedNeg = -75;
 
 const uint16_t threshold= 375;
 uint16_t counterL = 0;
 uint16_t counterR = 0;
-uint16_t prevCounterL = 0;
-uint16_t prevCounterR = 0;
-char forceTurn = 'E';
 
 Zumo32U4Buzzer buzzer;
 Zumo32U4LineSensors lineSensors;
@@ -27,8 +23,8 @@ Zumo32U4OLED display;
 Zumo32U4Encoders encoders;
 
 
-int storageArray[50]; 
-uint32_t timeStorageArray[50];
+int storageArray[100]; 
+uint32_t timeStorageArray[100];
 Vector<int> turnMemory;
 Vector<uint32_t> turnMemoryTime;
 
@@ -231,8 +227,6 @@ void setup() {
 }
 
 void loop() {
-
-  Serial.println(targetHouses);
   
   turnSensorUpdate();
   proximitySensors.read();
@@ -370,8 +364,6 @@ void turnRight(){
 void resetCounters(){
   counterL = 0;
   counterR = 0;
-  prevCounterL = 0;
-  prevCounterR = 0;
 }
 
 void calibrateSensors()
@@ -388,7 +380,7 @@ void calibrateSensors()
   turnSensorReset();
 
   // Turn to the left 90 degrees.
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
+  motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
   while((int32_t)turnAngle < turnAngle45 * 2)
   {
     lineSensors.calibrate();
@@ -396,7 +388,7 @@ void calibrateSensors()
   }
 
   // Turn to the right 90 degrees.
-  motors.setSpeeds(defaultSpeedPos, defaultSpeedNeg);
+  motors.setSpeeds(leftPWMMotorSpeed, -rightPWMMotorSpeed);
   while((int32_t)turnAngle > -turnAngle45 * 2)
   {
     lineSensors.calibrate();
@@ -404,7 +396,7 @@ void calibrateSensors()
   }
 
   // Turn back to center using the gyro.
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedPos);
+  motors.setSpeeds(-leftPWMMotorSpeed, rightPWMMotorSpeed);
   while((int32_t)turnAngle < 0)
   {
     lineSensors.calibrate();
@@ -441,7 +433,7 @@ void revertFromMemory(){
       motors.setSpeeds(0,0);
       break;
     }
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedNeg);
+  motors.setSpeeds(-leftPWMMotorSpeed, -rightPWMMotorSpeed);
   delay(getRevertedDelayTime());
   motors.setSpeeds(0,0);
 
