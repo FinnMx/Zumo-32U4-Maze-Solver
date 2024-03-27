@@ -216,7 +216,7 @@ void setup() {
     }
   }
 
-  buzzer.playFrequency(440, 500, 7);
+  buzzer.playFrequency(440, 100, 7);
 
   buttonA.waitForButton();
   turnSensorSetup();
