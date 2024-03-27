@@ -38,6 +38,23 @@ void setup() {
   //Song to ensure that the zumo has been flashed and is ready
   buzzer.playFrequency(440, 100, 7);
 
+  while (!buttonB.getSingleDebouncedRelease())
+  {
+    if(buttonA.getSingleDebouncedRelease()){
+      targetHouses++;
+      if(targetHouses > 2){
+        targetHouses = 1;
+      }
+
+      for(uint8_t i = 0; i < targetHouses; i++){
+        delay(200);
+        buzzer.playFrequency(440, 100, 10);
+      }
+    }
+  }
+
+  buzzer.playFrequency(440, 500, 7);
+
   buttonA.waitForButton();
   turnSensorSetup();
   calibrateSensors();
@@ -58,15 +75,24 @@ void loop() {
   int16_t proxReadingL = proximitySensors.countsFrontWithLeftLeds();
   int16_t proxReadingR = proximitySensors.countsFrontWithRightLeds();
 
-  if(proxReadingL >= 6 && proxReadingR >= 6) {  finished = true; }
-  
-  if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
-
   lineSensors.read(lineSensorValues);
   prevTime = timer.read();
+
+  if(proxReadingL >= 6 && proxReadingR >= 6) {  detectedHouses++; encounteredAHouse(prevTime); timer.stop(); timer.start(); }
+  if(finished){ motors.setSpeeds(0,0); revertFromMemory(); return 0; }
   
   if(lineSensorValues[0] > threshold && lineSensorValues[1] > threshold && lineSensorValues[2] < threshold){
+  counterL = 0;
   counterR++;
+  if((counterR % 3) == 0){
+    counterR = 0;
+    turnMemoryTime.push_back(prevTime);
+    turnMemory.push_back(1);
+    reverse();
+    turnLeft();
+    timer.stop();
+    timer.start();
+  } else{
       turnMemoryTime.push_back(prevTime);
       turnMemory.push_back(0);
       reverse();
@@ -74,15 +100,28 @@ void loop() {
       timer.stop();
       timer.start();
   }
+  }
   else if((lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] < threshold)
   || (lineSensorValues[2] > threshold && lineSensorValues[1] > threshold && lineSensorValues[0] > threshold)){
+    counterR = 0;
     counterL++;
+    if((counterL % 3) == 0){
+       buzzer.playFrequency(440, 100, 15);
+      counterL = 0;
+      turnMemoryTime.push_back(prevTime);
+      turnMemory.push_back(0);
+      reverse();
+      turnRight();
+      timer.stop();
+      timer.start();
+    } else{
     turnMemoryTime.push_back(prevTime);
     turnMemory.push_back(1);
     reverse();
     turnLeft();
     timer.stop();
     timer.start();
+    }
   }
 
   if(lineSensorValues[2] > threshold && lineSensorValues[1] <= threshold){
@@ -110,6 +149,7 @@ void loop() {
   }
   
   motors.setSpeeds(leftPWMMotorSpeed,rightPWMMotorSpeed);
+    
 }
 ```
 This loop function may seem rather long and cumbersome, but it is quite simple when broken down. On each loop we take a new reading from the line sensors, check if there is a object infront of us via the proximity sensors, and note the current time elapsed. We then have 4 if clauses, checking if any of our line sensors have passed a certain threshold. If they have we then call a certain movement function and push what we did into the turnMemory vector. This loop will run until we have found our house.
@@ -135,19 +175,22 @@ void revertFromMemory(){
     bearLeft();
     motors.setSpeeds(0,0);
     break;
+    case 4:
+    turn180();
+    motors.setSpeeds(0,0);
     default:
       motors.setSpeeds(0,0);
       break;
     }
-  motors.setSpeeds(defaultSpeedNeg, defaultSpeedNeg);
+  motors.setSpeeds(-leftPWMMotorSpeed, -rightPWMMotorSpeed);
   delay(getRevertedDelayTime());
   motors.setSpeeds(0,0);
 
   turnMemoryTime.pop_back();
   turnMemory.pop_back();
   }
-  finished = true;
 }
+
 ```
 
 This function is called once we have found our house(s). It simpily reverses the turnMemoryVector by popping values off of it. The values popped off are the values recorded while trying to locate the house, so we do the opposite of each turn. We then call "getRevertedDelayTime()" to wait for the elapsed time that passed between turns recorded.
